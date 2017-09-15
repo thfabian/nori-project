@@ -1,0 +1,441 @@
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'>
+<html xmlns='http://www.w3.org/1999/xhtml' xml:lang='en' lang='en'>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" type="image/vnd.microsoft.icon" href="../favicon.ico" />
+
+    <title>Computer Graphics - PA1</title>
+
+    <link href="resources/bootstrap.min.css" rel="stylesheet">
+    <link href="resources/offcanvas.css" rel="stylesheet">
+    <link href="resources/custom2014.css" rel="stylesheet">
+    <link href="resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+
+<div class="container headerBar">
+    <h1>Project - Fabian Thüring (12-936-241)</h1>
+</div>
+
+<div class="container contentWrapper">
+<div class="pageContent">
+
+	<!-- ================================================================= -->
+
+	<h2>Project Idea</h2>
+    <p>Water, among fire, earth and air is one of the classical elements and the key to life as we encounter it on this planet. This project will depict a scene which is the embodiment of water, the ocean. As our atmosphere usually isn't homogenous, we have small cloud formations in the lower troposphere which can beautifully interact with the sun light and create this marvelously looking scenery as shown in the images below.</p>
+
+    <h3>Refrence image</h3>
+    
+    
+    <div style="width: 45.0%; float: left; margin-left: 2.0%; margin-bottom: 1.5em;">
+            <div class="twentytwenty-container">
+                <img src="./images/final-scene/day.jpg" alt="" class="img-responsive">
+            </div>
+    </div>
+    
+    <div style="width: 45.0%; float: left; margin-left: 2.5%; margin-bottom: 1.5em;">
+            <div class="twentytwenty-container">
+                <img src="./images/final-scene/night.jpg" alt="" class="img-responsive">
+            </div>
+    </div>
+    
+    <!-- ================================================================= -->
+        
+	<h2>Implemented features</h2>
+    <h3>Depth of Field (5 Points)</h3>
+    <p>Cameras in the real world have lens systems which focus the light through a finite-sized aperture onto the film plane, as opposed to pinhole cameras which have infinitesimal aperture. Consequently, a point might be projected onto an area (circle of confusion) which results in a blurred image. This effect is called depth-of-field. In this section I've added support for depth-of-field by extending the perspective camera (<tt>Perspective::sampleRay</tt>). Two new parameters have been introduced:</p> 
+    <ul>
+        <li><tt>lensRadius</tt>: Control the radius of the lens.</li>
+        <li><tt>focalDistance</tt>: The distance to the focal plane (where radius of circle of confusion is zero)</li>
+    </ul>
+    <p>The general implementation idea is the following: First, we sample a point on the lens by sampling a uniform disk and scale the sample with the radius of the lens. Secondly, we determine the proper direction of the new ray and apply all transformations to world space.</p>
+    <p>Relevant files:</p>
+    <ul>
+        <li><tt>perspective.cpp</tt></li>
+    </ul>
+
+    <h4>Cornell box scene</h4>
+    <p>The following Cornell box scene was rendered with the MIS path tracing integrator using 512 samples per pixel. The images below show a focal distance matching the front spheres depth with a lens radius of 0.1 and 0.3. The image to the right clearly shows the effect of a larger lens radius wich results in an increase of blurriness with increasing distance to the focal plane.</p>.
+</p>
+    <div class="twentytwenty-container">
+        <img src="./images/depth-of-field/path-mis-spp-512-fD-0-1.png" alt="lens radius 0.1" class="img-responsive">
+        <img src="./images/depth-of-field/path-mis-spp-512-fD-0-3.png" alt="lens radius 0.3" class="img-responsive">
+        <img src="./images/depth-of-field/path-mis-spp-512-fD-0-0.png" alt="no depth of field" class="img-responsive">
+    </div>
+    
+    <!-- ================================================================= -->
+
+    
+    <h3>Spot light emitter (5 Points)</h3>
+    <p>Spot lights are a variation of point lights with emitting light in a cone of directions from their position. In addition to <tt>position</tt> and <tt>power</tt> the spot light has a new parameter <tt>direction</tt> \(\vec{d}_s\). The cone is specified by two additional parameters <tt>width</tt> and <tt>falloff</tt>. The width angle \(\theta_{w}\), in degrees, specifies the extend of the cone while the falloff angle \(\theta_{f}\) is responsible for smoothing out the transition from full illumination, inside the cone, to none, outside the cone. Therefore, it must always hold \( 0 \leq \theta_{f} \leq \theta_{w} \leq 180\).</p>
+    
+    <p>Given a direction to the light source \(\vec{w}_i\) and the direction of emission of the spot light \(\vec{d}_s\), we can compute the angle between the two vectors: \(\theta = \cos^{-1}(-\vec{w}_i\cdot\vec{d}_s)\) and the occlusion (which will be multiplied with the radiance) can be calculated like this:</p> 
+    <center>
+    <p>
+            \(
+                occlusion(\theta) = 
+                \begin{cases}
+                    0,              & \theta \geq \theta_w \\
+                    \left(\frac{\cos\theta - \cos\theta_w}{\cos\theta_f - \cos\theta_w}\right)^4,& \theta_f \leq \theta \leq \theta_w \\
+                    1,              & \text{otherwise}
+                \end{cases}
+            \)
+        </p>
+    </center>
+     <center>
+         <img src="images/spotlight/occlusion.jpg" align="middle">
+     </center>
+     <h2></h2>
+    <p>In the first case we are outside the light cone, hence the radiance must be 0. In the second case we are in the falloff area which is represented by a fourth order polynomial. The images below showcase the effect of the falloff with the second image having a much bigger falloff area than the first one. </p>
+    <p>Relevant files:</p>
+    <ul>
+        <li><tt>spotlight.cpp</tt></li>
+    </ul>
+       
+    <div class="twentytwenty-container">
+        <img src="./images/spotlight/path-mis-512-25-20.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel - width \(\theta_{w} = 25 ^{\circ}\), falloff \(\theta_{f} = 20 ^{\circ}\)</figcaption>
+    </center>
+
+    <div class="twentytwenty-container">
+        <img src="./images/spotlight/path-mis-512-25-15.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel - width \(\theta_{w} = 25 ^{\circ}\), falloff \(\theta_{f} = 15 ^{\circ}\)</figcaption>
+    </center>
+    
+    
+    <!-- ================================================================= -->
+
+    <h3>Cluster version of nori (5 Points)</h3>
+    <p>Nori is tightly coupled to nanogui, an OpenGL based graphical user interface. While this comes in very handy when debugging the rendering process, it is unsuitable for rendering on server based clusters like <a href="https://www1.ethz.ch/id/services/list/comp_zentral/cluster/index_EN">EULER</a>. In order to circumvent this problem I've added a new executable <tt>nori-cluster</tt>. This allows rendering without any X-Server running and hence can be executed on EULER. The new files <tt>cluster.h</tt> and <tt>cluster.cpp</tt> facilitate this task, while the updated CMake file ensures a correct building procedure. Below is an output of <a href="http://man7.org/linux/man-pages/man1/ldd.1.html">ldd(1)</a> which shows the reduced object dependencies of <tt>nori-cluster</tt> compared to <tt>nori</tt>.
+        
+    <p>In addition to make the rendering process less error prone, rendering checkpoints have been added which periodically, based on user input parameters, save the current image. Aswell as command-line arguments to set the number of threads being used by TBB to prevent nori from hijacking the entire system. 
+    
+    <p>Relevant files:</p>
+    <ul>
+        <li><tt>cluster.h</tt></li>
+        <li><tt>cluster.cpp</tt></li>
+        <li><tt>main_cluster.cpp</tt></li>
+        <li><tt>CMakeLists.txt</tt></li>
+    </ul>
+    <pre class="prettyprint">>$ ldd ./nori-cluster
+>$ linux-vdso.so.1 =>  (0x00007fff27304000)
+>$ libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007fa08a0d7000)
+>$ libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fa089ebe000)
+>$ libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007fa089cba000)
+>$ libstdc++.so.6 => /usr/lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fa0899ad000)
+>$ libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fa0896a7000)
+>$ libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fa089490000)
+>$ libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fa0890cb000)</pre>    
+
+    <pre class="prettyprint">>$ ldd ./nori
+>$ linux-vdso.so.1 =>  (0x00007ffc635fd000)
+>$ libGL.so.1 => /usr/lib/nvidia-352/libGL.so.1 (0x00007fa7d0ef3000)
+>$ libXxf86vm.so.1 => /usr/lib/x86_64-linux-gnu/libXxf86vm.so.1 (0x00007fa7d0ced000)
+>$ libXrandr.so.2 => /usr/lib/x86_64-linux-gnu/libXrandr.so.2 (0x00007fa7d0ae3000)
+>$ libXinerama.so.1 => /usr/lib/x86_64-linux-gnu/libXinerama.so.1 (0x00007fa7d08e0000)
+>$ libXcursor.so.1 => /usr/lib/x86_64-linux-gnu/libXcursor.so.1 (0x00007fa7d06d6000)
+>$ libXi.so.6 => /usr/lib/x86_64-linux-gnu/libXi.so.6 (0x00007fa7d04c6000)
+>$ libX11.so.6 => /usr/lib/x86_64-linux-gnu/libX11.so.6 (0x00007fa7d0191000)
+>$ libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007fa7cff73000)
+>$ libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fa7cfd5a000)
+>$ libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007fa7cfb56000)
+>$ libstdc++.so.6 => /usr/lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fa7cf849000)
+>$ libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fa7cf543000)
+>$ libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fa7cf32c000)
+>$ libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fa7cef67000)
+>$ libnvidia-tls.so.352.63 => /usr/lib/nvidia-352/tls/libnvidia-tls.so.352.63 (0x00007fa7ced64000)
+>$ libnvidia-glcore.so.352.63 => /usr/lib/nvidia-352/libnvidia-glcore.so.352.63 (0x00007fa7cc2d1000)
+>$ libXext.so.6 => /usr/lib/x86_64-linux-gnu/libXext.so.6 (0x00007fa7cc0bf000)
+>$ libXrender.so.1 => /usr/lib/x86_64-linux-gnu/libXrender.so.1 (0x00007fa7cbeb5000)
+>$ libXfixes.so.3 => /usr/lib/x86_64-linux-gnu/libXfixes.so.3 (0x00007fa7cbcaf000)
+>$ libxcb.so.1 => /usr/lib/x86_64-linux-gnu/libxcb.so.1 (0x00007fa7cba90000)
+>$ /lib64/ld-linux-x86-64.so.2 (0x00007fa7d1223000)
+>$ libXau.so.6 => /usr/lib/x86_64-linux-gnu/libXau.so.6 (0x00007fa7cb88c000)</pre>    
+    
+    <!-- ================================================================= -->
+
+    <h3>Normal and texture mapping (10 Points)</h3>
+    <p>In order to get more realism out of the scene I've implemented normal and texture mapping in nori. To load the png image into memory I made use of the excellent and lightweight <a href="http://lodev.org/lodepng/">lodePNG library</a>. The main class for texture mapping is <tt>PngTexture</tt> which derives from <tt>Texture</tt>. The texture maps are associated with a BRDF (diffuse or microfacet) and the normal maps will be paired with a shape.
+            
+    <p>Relevant files:</p>
+    <ul>
+        <li><tt>texture.h</tt></li>
+        <li><tt>pngtexture.cpp</tt></li>
+        <li><tt>sphere.cpp</tt></li>
+        <li><tt>mesh.cpp</tt></li>
+    </ul>
+    
+    <h4>Texture mapping</h4>
+    <p>Given a pair of \((u,v)\) coordinates our task is to convert this into the pixel coordinates and return an albedo. If the \((u,v)\) coordinates are between \([0,1]\) the mapping is rather straight forward. However, if the coordinates lay in an arbitrary interval we have to apply some sort of transformation: I decided to implement the technique of replication. The first image below shows two texture mapped spheres (Jupiter and Mars) rendered with a 512 sample per pixel Path MIS integrator using a diffuse BRDF.</p>
+        
+    <div class="twentytwenty-container">
+        <img src="./images/normal-texture/path-mis-spp-512-jupiter-texture.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel (diffuse BRDF)</figcaption>
+    </center>
+        
+    <p>The following images show the replication of the texture (and corresponding normal map aswell). In the right image the \((u,v)\) coordinates lay in \([0,4]^2\) and hence the image is replicated 16 times where in the left we have the reference in \([0,1]^2\).</p>
+    
+    <div class="twentytwenty-container">
+        <img src="./images/normal-texture/path-mis-spp-512-metal-1.png" alt="[0,1] x [0,1]" class="img-responsive">
+        <img src="./images/normal-texture/path-mis-spp-512-metal-4.png" alt="[0,4] x [0,4]" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel (diffuse BRDF)</figcaption>
+    </center>
+    
+    <p>When using a microfacet BRDF one has to pay close attention to ensure energy conservation. In the exercise we did this by scaling the specular component with <tt>(1 - kd).maxCoeff()</tt> where <tt>kd</tt> is the albedo of the diffuse material. When using a texture as albedo we have to make sure that we adjust this scaling progressively. In the images below we can see the difference between being and being not energy conservant:</p>
+        <div class="twentytwenty-container">
+        <img src="./images/normal-texture/path-mis-spp-16-micro-energy.png" alt="energy conservant" class="img-responsive">
+        <img src="./images/normal-texture/path-mis-spp-16-micro-no-energy.png" alt="NOT energy conservant" class="img-responsive">
+    </div>
+        <center>
+        <figcaption>Path MIS <b>16</b> sample per pixel (Microfacet BRDF alpha = 0.1)</figcaption>
+    </center>
+
+    <h4>Normal mapping</h4>
+    <p>The normal map works internally almost the same as a texture map with a subtle difference in how the map is going to be evaluated. Given a \((u,v)\) value we can calculate the pixel coordinate \((i,j)\) and retrieve the \((r,g,b)\) value of the map. Next we have to apply a linear transformation \([0,1] \rightarrow [-1,1]\). The final normal is calculated as:</p>
+    
+    <p> \(\vec{n} = \left(
+                    \begin{array}{c}
+                        2r - 1 \\
+                        2g - 1 \\
+                        2b - 1 \\
+                    \end{array}
+                    \right)\)
+    </p>
+    <p>The resulting normal will be re-normalized and transformed into to the <tt>shFrame.toWorld</tt> of the mesh or sphere when being called in <tt>setHitInformation</tt>.</p>
+    <h4>Results</h4>
+    <p>Below we can see a three-way comparison of normal and texture mapping. The image was rendered with the Path MIS integrator using 512 samples per pixel and a diffuse BRDF. We clearly observe that the application of normal and texture mapping yield a much nicer looking image than simple texture mapping.</p>
+
+    <div class="twentytwenty-container">
+        <img src="./images/normal-texture/path-mis-spp-512-texture.png" alt="texture" class="img-responsive">
+        <img src="./images/normal-texture/path-mis-spp-512-normal.png" alt="normal" class="img-responsive">
+        <img src="./images/normal-texture/path-mis-spp-512-texture-normal.png" alt="texture & normal" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel</figcaption>
+    </center>
+    
+    <!-- ================================================================= -->
+
+    <h3>Environment map emitter with importance sampling (15 Points)</h3>
+    <p>Environment mapping is an efficient image-based rendering technique to approximate a reflective surrounding surface. In our case the environmentmap is a simple png or exr image, parametrized by longitude \(\theta\) and \(\phi\) latitude coordinates. The <tt>EnviromentMap</tt> class is treated as an Emitter and hence inherits from <tt>Emitter</tt>. Like any other Emitter it must provide a sampling method. A naive approach would be to simply sample a uniform sphere and convert the \((\theta,\phi)\) coordinates to the corresponding \((u,v)\) coordinates of the image. We shall use a more sophisticated approach presented by Matt Phar and Greg Humphreys <a href="#ref1">[1]</a> which is based on sampling the marginal and conditional probability density function independently.</p>
+    
+    <p>Relevant files:</p>
+    <ul>
+        <li><tt>environmentmap.cpp</tt></li>
+    </ul>
+        
+    <div class="twentytwenty-container">
+        <img src="./images/environmentmap/desert-spp-512-path_mis.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel using importance sampling</figcaption>
+    </center>
+    <h4>Theory</h4>
+    <p>Our goal is to draw samples from \(p(\theta,\phi) \propto L_{env}(\theta,\phi)\sin \theta\). The approach can be roughly split in 4 steps:</p>
+    <ol type="1">
+        <li>Create a scalar version \(f(\theta, \phi)\) of the image. This can be done by taking the luminance, maximum or the average of the RGB channels. All three options are supported in the implementation and can be controlled by the flag <tt>scalarize</tt> (all the image here use the luminance). In addition, we scale \(f\) with \(\sin\theta\).</li>
+        <li>Compute the marginal pdf \(p(\theta) = \int^{2\pi}_0 f(\theta, \phi) d\phi \rightarrow p_i = \sum^M_{j=0} f_{i,j}\) with \(f_{i,j}\) being the scalarized image of size \(N \times M\).</li>
+        <li>Compute conditional pdf \(p(\phi|\theta) = \frac{p(\theta,\phi)}{p(\theta)}\)</li>
+        <li>Draw samples \(\theta \propto p(\theta)\) and \(\phi = p(\phi|\theta)\).</li>
+    </ol>
+    <p>Further details can be found in <tt>environmentmap.cpp</tt></p>
+    
+    <h4>Results</h4>
+    <p>The question remains does it work and is it worth it? The following two comparisons will outline the problem. In the first comparison one can not spot any difference between the importance sampled image and the simple sampled one at all. However, in the second comparison the importance sampled image has way less noise than the simple sampled one. We can conclude that if the environment map has a few very bright spots (like the ceiling lights in the chapel) and is mostly dark elsewhere, importance sampling can greatly improve the quality of the rendered image. On the other hand, if the image has a more continuous luminance, importance sampling does not noticeably improve the quality.</p>
+    <div class="twentytwenty-container">
+        <img src="./images/environmentmap/simple-pisa-spp-1024-path-mis.png" alt="Simple sampling" class="img-responsive">
+        <img src="./images/environmentmap/importance-pisa-spp-1024-path-mis.png" alt="Importance sampling" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>1024</b> samples per pixel</figcaption>
+    </center>
+    
+    <div class="twentytwenty-container">
+        <img src="./images/environmentmap/simple-grace-512-spp-path-mis.png" alt="Simple sampling" class="img-responsive">
+        <img src="./images/environmentmap/importance-grace-512-spp-path-mis.png" alt="Importance sampling" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>512</b> samples per pixel</figcaption>
+    </center>
+    
+    <h4>Validation</h4>
+    <p>In order to validate my implementation I added a dumping mechanism which allows to progressively write all the sampled pixel coordinates of the environment map to a file. I wrote a small Matlab script to visualize the output. Below we can clearly observe the effect of the importance sampling. Both test cases use the luminance to create a scalar version of the image. In the first image the upper part of the center window is sampled more intensively compared to the lower part due to plants reducing the luminance in the lower half.
+
+    <div class="twentytwenty-container" style="width: 75%">
+        <img src="./images/environmentmap/simple-path-mis.png" alt="Simple sampling" class="img-responsive">
+        <img src="./images/environmentmap/importance-path-mis-luminance.png" alt="Importance sampling" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Path MIS <b>1</b> samples per pixel - visualized every 10-ths sample</figcaption>
+    </center>
+
+    
+    <div class="twentytwenty-container" style="width: 75%">
+        <img src="./images/environmentmap/simple-checkerboard.png" alt="Simple sampling" class="img-responsive">
+        <img src="./images/environmentmap/importance-checkerboard.png" alt="Importance sampling" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Direct EMS <b>1</b> samples per pixel - visualized every 10-ths sample</figcaption>
+    </center>
+
+    <!-- ================================================================= -->
+
+    <h3>Homogenous participating media (20 Points)</h3>
+    <p>In this last part I added global homogenous participating media to my scene. As I may wanted to add heterogenous media later (which ultimately I did not have the time for), I opted to implement ray marching.</p>
+    
+    <p>Relevant files:</p>
+    <ul>
+        <li><tt>media.h</tt></li>
+        <li><tt>homogenous.cpp</tt></li>
+        <li><tt>phasefunction.h</tt></li>
+        <li><tt>isotropic.cpp</tt></li>
+        <li><tt>greenstein.cpp</tt></li>
+        <li><tt>schlick.cpp</tt></li>
+        <li><tt>volume_direct_ems.cpp</tt></li>
+        <li><tt>volume_path_mats.cpp</tt></li>
+    </ul>
+    
+    <h4>Ray-marching</h4>
+    <h5>Theory</h5>
+    <p>In order to account for participating media, we have to solve the Volumetric Rendering Equation, which can be written as follows, neglecting radiance of the volume:</p>
+    <center>
+    <p>
+        \(
+        L(x,\vec{w})= T_r(x,x_z)L(x_z, \vec{w}) + \int_0^z T_r(x,x_t)\sigma_s(x_t)\int_{S^2} f_p(x_t,\vec{w}', \vec{w}) L_i(x_t, \vec{w}') d\vec{w}'dt 
+        \)
+    </p>
+    </center>
+    <p>With</p>
+    <ul>
+        <li>\(\sigma_t\) is the extinction coefficient (controlled by the sum of <tt>simga_a</tt> (absorption) and <tt>sigma_s</tt> in the implementation)</li>
+        <li>\(\sigma_s\) is the scattering coefficient (controlled by <tt>sigma_s</tt>)</li>
+        <li>\(T_r(x,x_z)\) represents the transmittance from \(x\) to \(x_z\) which is given by \(e^{-\sigma_t||x-x_z||}\) in homogenous media.</li>
+        <li>\(f_p(x_t,\vec{w}', \vec{w})\) is the media's associated phasefunction, which controls the scattering.</li>
+    </ul>
+    <p>Below we can see some results obtained from the direct illumination integrator <tt>VolumeDirectEms</tt> defined in <tt>volume_direct_ems.cpp</tt> using 512 and 256 samples  per pixel, respectively. The first image is using an isotropic phase function an the second one an anistropic backward scattering (Henyey-Greenstein).</p>
+    <div class="twentytwenty-container">
+        <img src="./images/volume/spot-direct-ems-512-spp.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Direct Illumination <b>512</b> samples per pixel (<tt>sigma_a = sigma_s = 0.1, stepsize = 0.05</tt>)</figcaption>
+    </center>
+    <div class="twentytwenty-container">
+        <img src="./images/volume/cbox-direct-ems-256-spp.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Direct Illumination <b>256</b> samples per pixel (<tt>sigma_a = sigma_s = 0.25, stepsize = 0.05, g=-0.5</tt>)</figcaption>
+    </center>
+    
+    <h5>Implementation details</h5>
+    <p>The medium is defined by a handful of coefficients \((\sigma_t, \sigma_s)\) and registered in the scene. The <tt>Medium</tt> interface contains functions for calculating the transmittance and in-scattering (<tt>transmittance</tt> and <tt>inScattering</tt>, respectivly). Implementation of the <tt>Medium</tt> have to provide those functions as for example <tt>HomogenousMedium</tt> in <tt>homogenous.cpp</tt> does. The ray marching algorithm is implemented as described in the course notes and uses only single scattering! One more important note: It is crucial to randomly shift the initial position with <tt>rand()*dt</tt>, otherwise we have ugly-looking artifacts as shown below. </p>
+    
+    <div class="twentytwenty-container">
+        <img src="./images/volume/volume-direct-ems-16-spp-random-shift.png" alt="random shift" class="img-responsive">
+        <img src="./images/volume/volume-direct-ems-16-spp-no-random-shift.png" alt="no random shift" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Direct Illumination <b>16</b> samples per pixel (<tt>sigma_a = sigma_s = stepsize = 0.1</tt>)</figcaption>
+    </center>
+    
+    <h4>Phasefunctions</h4>
+    <p>The Phasefunction describes the distribution of the scattered light. The interface of the <tt>Phasefunction</tt> is very similar to the one of <tt>BSDF</tt>. I've implemented the following phase functions:</p>
+    <h5>Isotropic</h5>
+    <p>Completly uniform scattering, can be associated with a diffuse BRDF.</p>
+    \(f_p(\vec{w}',\vec{w}) = \frac{1}{4\pi}\)
+    <h5>Henyey-Greenstein (HG)</h5>
+    <p>The Henyey-Greenstein function can be used to describe anisotropic scattering. Given a parameter \(g\) which represents the mean cosine between \(-\vec{w}\) and \(\vec{w}'\):</p>
+    <p>\(f_{pHG}(\theta) = \frac{1}{4\pi}\frac{1-g^2}{(1+g^2-2g\cos\theta)^{3/2}}\)</p>
+    <p>\(\theta = -\vec{w} \cdot \vec{w}'\)</p>
+    <p>If \(g = 0\) we recover isotropic scattering, \(g \lt 0\) will result in backward scattering and \(g \gt 0\) is forward scattering. Below we can see the effect of the parameter \(g\). We observe that the backward scattering is much brighter in the top part (closer to the light) compared to the forward scattering.</p>
+    <div class="twentytwenty-container">
+        <img src="./images/volume/volume-ems-forward-0-8.png" alt="forward (g=0.8)" class="img-responsive">
+        <img src="./images/volume/volume-ems-backward-0-5.png" alt="backward (g=-0.5)" class="img-responsive">
+        <img src="./images/volume/volume-ems-isotropic.png" alt="isotropic" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Direct Illumination <b>256</b> samples per pixel (<tt>sigma_a = sigma_s = stepsize = 0.1</tt>)</figcaption>
+    </center>
+    
+    <h5>Schlick</h5>
+    <p>There exits an approximation of the Henyey-Greenstein phase function, called Schlick approximation:</p>
+    <p>\(f_{pSchlick}(\theta) = \frac{1}{4\pi}\frac{1-k^2}{(1-k\cos\theta)^2}\)</p>
+    <p>\(\theta = -\vec{w} \cdot \vec{w}'\)</p>
+    <p>\(k = 1.55g - 0.55g^3\)</p>
+    <p>By simple observation, lacking the expensive <tt>pow</tt> operation, this should increase performance. The below images (Direct illumination 16 samples per pixel) have been rendered with Schlick (170s) and Greenstein (182s). While there is barely any visual difference the increase in speed seems to be worth it.</p>
+    <div class="twentytwenty-container">
+        <img src="./images/volume/volume-ems-16-greenstein.png" alt="Greenstein" class="img-responsive">
+        <img src="./images/volume/volume-ems-16-schlick.png" alt="Schlick" class="img-responsive">
+    </div>
+    <h4>Global Illumination</h4>
+    <h5>Volumetric path tracing</h5>
+    <p>In order to be able to render global illumination I extended the material path tracing integrator (PathMats) to account for participating media (<tt>volume_path_mats.cpp</tt>). The idea is pretty much the same as with <tt>VolumeDirectEMS</tt>. For each ray we perform a ray marching to account for single in-scattering. The sampled albedo of the BRDF will be reduced according to the transmittance of the media. The image below shows the Cornell box with a dielectric and mirrored sphere to showcase the global illumination.</p>
+    
+    <div class="twentytwenty-container">
+        <img src="./images/volume/volume-path-mats-spp-1024-0-25-0-25-backward.png" alt="" class="img-responsive">
+    </div>
+    <center>
+        <figcaption>Global Illumination <b>1024</b> samples per pixel (<tt>sigma_a = sigma_s = 0.25, g=-0.5, stepsize = 0.05</tt>)</figcaption>
+    </center>
+    
+    <!-- ================================================================= -->
+
+ 	<h3>Final scene</h3>
+    <p>The water is rendered with a two layered BRDF: the top layer is dielectric wave mesh with a scattering coefficient of water <tt>intIOR=1.33</tt> and air <tt>extIOR=1.000277</tt> while the lower layer is plain mesh with a microfacet (<tt>alpha=0.1</tt>) BRDF. The whole scene is covered in a homogenous participating media (<tt>sigma_a = sigma_s = 0.1, g=-0.5, stepsize = 0.1</tt>) which should represent fog over the water. The volumetric rendering equation is integrated using the <tt>VolumePathMats</tt> integrator which performs ray-marching with single scattering. The background of the scene is modeled with a matching environment map and slightly blurred with a depth of field camera. The image was generated using 2048 samples per pixel. </p>
+    
+    <center>
+    <div class="twentytwenty-container">
+        <img src="./images/final-scene/final-spp-2048-0-1-g-0-5.png" alt="" class="img-responsive">
+    </div>
+    </center>
+    
+    <!-- ================================================================= -->
+
+    <h2>References</h2>
+    [1] <a id="ref1" href="http://www.cs.virginia.edu/~jdl/bib/envmap/pharr04.pdf">Matt Pharr, Greg Humphreys. Monte Carlo Rendering with Natural Illumination. SIGGRAPH 2004</a>
+     <h2></h2>
+
+    <!-- ================================================================= -->
+
+    <h2>Resources</h2>
+    <p><a href="http://gl.ict.usc.edu/Data/HighResProbes/">Environment maps</a>: The Environment maps were obtained from USC.</p>
+    <p><a href="http://graphics.stanford.edu/data/3Dscanrep//">Stanford dragon</a>: The Stanford 3D Scanning Repository.</p>
+    <p><a href="http://opengameart.org/content/50-free-textures-4-normalmaps">Normal/Texture maps:</a> Normal and texture maps are from http://opengameart.org/.</p>
+    <p><a href="http://tf3dm.com/3d-model/sailboat-81879.html">Meshes:</a> The meshes were obtained from http://tf3dm.com/.</p>
+    <p><a href=>The sky map</a> is obtained from www.foro3d.com.</p>
+    <h2></h2>
+
+</div>
+</div>
+
+<!-- Bootstrap core JavaScript -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="resources/bootstrap.min.js"></script>
+<script src="/js/offcanvas.js"></script>
+<script src="resources/jquery.event.move.js"></script>
+<script src="resources/jquery.twentytwenty.js"></script>
+<!-- MathJax -->
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+<script>
+$(window).load(function(){$(".twentytwenty-container").twentytwenty({default_offset_pct: 0.5});});
+</script>
+
+</body>
+</html>
